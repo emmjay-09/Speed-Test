@@ -16,19 +16,31 @@ type Word = {
   charFlags?: boolean[];
 };
 
+type Letter = {
+  text: string;
+};
+
 const passages = passagesData as PassagesData;
 
 function Navbar() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [isRunning, setIsRunning] = useState(false);
+  const [isValid, setIsValid] = useState(false);
   const [buttonText, setButtonText] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [passage, setPassage] = useState("");
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [word, setWord] = useState<Word[]>(tokenise(passage));
+  const [wordIndex, setWordIndex] = useState(0);
+  const [letterIndex, setLetterIndex] = useState(0);
+  const [word, setWord] = useState<Word[]>(tokenisePassage(passage));
+  const [letter, setLetter] = useState<Letter[]>(
+    tokeniseWord(word[wordIndex]?.text || ""),
+  );
   const [inputValue, setInputValue] = useState("");
 
-  function tokenise(passage: string): Word[] {
+  const validate =
+    letter[letterIndex]?.text === inputValue[inputValue.length - 1];
+
+  function tokenisePassage(passage: string): Word[] {
     if (!passage || !passage.trim()) return [];
     return passage
       .trim()
@@ -38,6 +50,28 @@ function Navbar() {
         text: word,
       }));
   }
+  function tokeniseWord(word: string): Letter[] {
+    if (!word || !word.trim()) return [];
+    return word
+      .trim()
+      .split("")
+      .filter(Boolean)
+      .map((letter) => ({
+        text: letter,
+      }));
+  }
+  useEffect(() => {
+    setLetter(tokeniseWord(word[wordIndex]?.text || ""));
+  }, [wordIndex, word]);
+
+  useEffect(() => {
+    setIsValid(validate);
+    console.log(
+      letter[letterIndex]?.text,
+      inputValue[inputValue.length - 1],
+      validate,
+    );
+  }, [letterIndex, inputValue, letter]);
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
     setInputValue(value);
@@ -46,14 +80,19 @@ function Navbar() {
     if (e.key === " ") {
       e.preventDefault();
       setInputValue("");
-      setCurrentIndex((prev) => prev + 1);
+      setWordIndex((prev) => prev + 1);
+      setLetterIndex(0);
+    } else if (e.key === letter[letterIndex]?.text) {
+      setLetterIndex(letterIndex);
+    } else if (e.key.length === 1) {
+      setLetterIndex((prev) => prev + 1);
     }
   }
 
-  const getRandomPassage = (level: Difficulty) => {
+  function getRandomPassage(level: Difficulty) {
     const list = passages[level];
     return list[Math.floor(Math.random() * list.length)]?.text ?? "";
-  };
+  }
 
   useEffect(() => {
     setPassage(getRandomPassage(difficulty));
@@ -61,8 +100,8 @@ function Navbar() {
 
   // update tokenized words whenever the passage changes
   useEffect(() => {
-    setWord(tokenise(passage));
-    setCurrentIndex(0);
+    setWord(tokenisePassage(passage));
+    setWordIndex(0);
     setInputValue("");
   }, [passage]);
 
@@ -98,10 +137,6 @@ function Navbar() {
     };
   }, [isRunning]);
 
-  useEffect(() => {
-    console.log(typed);
-  }, [inputValue]);
-
   const handleClick = () => {
     if (!isRunning) {
       setIsRunning(true);
@@ -118,8 +153,7 @@ function Navbar() {
     setButtonText(false);
   };
 
-  const typed =
-    !!word[currentIndex] && inputValue.trim() === word[currentIndex].text;
+  const typed = !!word[wordIndex] && inputValue.trim() === word[wordIndex].text;
 
   const getButtonClasses = (level: Difficulty) => {
     const isActive = difficulty === level;
@@ -194,7 +228,7 @@ function Navbar() {
             Passage
           </p>
           <p
-            className={`mt-4 leading-8 transition-opacity duration-200 ${!isRunning ? "opacity-20" : "opacity-100"}`}
+            className={`mt-4 leading-8 transition-opacity duration-200 ${!isRunning ? "opacity-20" : "opacity-100"} ${isValid ? "text-blue-700" : ""}`}
           >
             {passage}
           </p>
