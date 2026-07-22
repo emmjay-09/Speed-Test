@@ -9,6 +9,13 @@ type PassagesData = {
   hard: Passage[];
 };
 
+type Word = {
+  text: string;
+  typed?: string;
+  status?: "correct" | "incorrect" | "untyped";
+  charFlags?: boolean[];
+};
+
 const passages = passagesData as PassagesData;
 
 function Navbar() {
@@ -17,6 +24,31 @@ function Navbar() {
   const [buttonText, setButtonText] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [passage, setPassage] = useState("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [word, setWord] = useState<Word[]>(tokenise(passage));
+  const [inputValue, setInputValue] = useState("");
+
+  function tokenise(passage: string): Word[] {
+    if (!passage || !passage.trim()) return [];
+    return passage
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((word) => ({
+        text: word,
+      }));
+  }
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    setInputValue(value);
+  }
+  function handleWordChange(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === " ") {
+      e.preventDefault();
+      setInputValue("");
+      setCurrentIndex((prev) => prev + 1);
+    }
+  }
 
   const getRandomPassage = (level: Difficulty) => {
     const list = passages[level];
@@ -26,6 +58,13 @@ function Navbar() {
   useEffect(() => {
     setPassage(getRandomPassage(difficulty));
   }, [difficulty]);
+
+  // update tokenized words whenever the passage changes
+  useEffect(() => {
+    setWord(tokenise(passage));
+    setCurrentIndex(0);
+    setInputValue("");
+  }, [passage]);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -59,6 +98,10 @@ function Navbar() {
     };
   }, [isRunning]);
 
+  useEffect(() => {
+    console.log(typed);
+  }, [inputValue]);
+
   const handleClick = () => {
     if (!isRunning) {
       setIsRunning(true);
@@ -74,6 +117,9 @@ function Navbar() {
     setTimeLeft(60);
     setButtonText(false);
   };
+
+  const typed =
+    !!word[currentIndex] && inputValue.trim() === word[currentIndex].text;
 
   const getButtonClasses = (level: Difficulty) => {
     const isActive = difficulty === level;
@@ -98,7 +144,6 @@ function Navbar() {
           </p>
           <h1>Type as fast as you can in 60 seconds</h1>
         </div>
-
         <div className="flex gap-10">
           <div>WPM: 0</div>
           <div>Accuracy: 0%</div>
@@ -120,7 +165,6 @@ function Navbar() {
             </button>
           </div>
         </div>
-
         <div className="text-lg font-medium p-1">Difficulty:</div>
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -145,12 +189,13 @@ function Navbar() {
             Hard
           </button>
         </div>
-
         <div className="relative rounded-2xl border border-slate-700/80 bg-slate-950/70 p-6 text-slate-200">
           <p className="text-sm uppercase tracking-[0.3em] text-cyan-400">
             Passage
           </p>
-          <p className={`mt-4 leading-8 transition-opacity duration-200 ${!isRunning ? "opacity-20" : "opacity-100"}`}>
+          <p
+            className={`mt-4 leading-8 transition-opacity duration-200 ${!isRunning ? "opacity-20" : "opacity-100"}`}
+          >
             {passage}
           </p>
 
@@ -162,6 +207,16 @@ function Navbar() {
             {buttonText ? "Continue" : "Start"}
           </button>
         </div>
+        <input
+          className="w-full rounded-lg border border-slate-700/80 bg-slate-950/70 p-3 text-slate-200 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-cyan-400 focus:outline-none focus:ring-1"
+          type="text"
+          placeholder="Start typing here..."
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleWordChange}
+          autoFocus
+          readOnly={!isRunning}
+        />
       </section>
     </main>
   );
