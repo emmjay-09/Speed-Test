@@ -66,7 +66,7 @@ function Navbar() {
   }, [wordIndex, word]);
 
   useEffect(() => {
-    setIsValid(validate);
+    if (isValid) setIsValid(validate);
   }, [letterIndex, inputValue, letter]);
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
