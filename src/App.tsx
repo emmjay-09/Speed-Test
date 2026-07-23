@@ -13,7 +13,7 @@ type Word = {
   text: string;
   typed?: string;
   status?: "correct" | "incorrect" | "untyped";
-  charFlags?: boolean[];
+  charFlags?: ("correct" | "incorrect" | "untyped")[];
 };
 
 type Letter = {
@@ -48,6 +48,7 @@ function Navbar() {
       .filter(Boolean)
       .map((word) => ({
         text: word,
+        charFlags: word.split("").map(() => "untyped"),
       }));
   }
   function tokeniseWord(word: string): Letter[] {
@@ -82,14 +83,32 @@ function Navbar() {
       setInputValue("");
       setWordIndex((prev) => prev + 1);
       setLetterIndex(0);
-    } else if (e.key === letter[letterIndex]?.text) {
-      setLetterIndex(letterIndex);
     } else if (e.key.length === 1) {
+      const isCorrect = e.key === letter[letterIndex]?.text;
+      const newWord = [...word];
+      if (newWord[wordIndex]) {
+        if (!newWord[wordIndex].charFlags) {
+          newWord[wordIndex].charFlags = newWord[wordIndex].text
+            .split("")
+            .map(() => "untyped");
+        }
+        newWord[wordIndex].charFlags[letterIndex] = isCorrect
+          ? "correct"
+          : "incorrect";
+        setWord(newWord);
+      }
       setLetterIndex((prev) => prev + 1);
     }
   }
 
   function getRandomPassage(level: Difficulty) {
+    if (difficulty === "easy") {
+      setTimeLeft(60);
+    } else if (difficulty === "medium") {
+      setTimeLeft(120);
+    } else if (difficulty === "hard") {
+      setTimeLeft(180);
+    }
     const list = passages[level];
     return list[Math.floor(Math.random() * list.length)]?.text ?? "";
   }
@@ -149,11 +168,10 @@ function Navbar() {
   const handleDifficultyClick = (level: Difficulty) => {
     setDifficulty(level);
     setIsRunning(false);
-    setTimeLeft(60);
     setButtonText(false);
   };
 
-  const typed = !!word[wordIndex] && inputValue.trim() === word[wordIndex].text;
+  // const typed = !!word[wordIndex] && inputValue.trim() === word[wordIndex].text;
 
   const getButtonClasses = (level: Difficulty) => {
     const isActive = difficulty === level;
@@ -228,9 +246,27 @@ function Navbar() {
             Passage
           </p>
           <p
-            className={`mt-4 leading-8 transition-opacity duration-200 ${!isRunning ? "opacity-20" : "opacity-100"} ${isValid ? "text-blue-700" : ""}`}
+            className={`mt-4 leading-8 transition-opacity duration-200 ${!isRunning ? "opacity-20" : "opacity-100"}`}
           >
-            {passage}
+            {word.map((wordObj, wIdx) => (
+              <span key={wIdx}>
+                {wordObj.text.split("").map((letter, lIdx) => {
+                  const charStatus = wordObj.charFlags?.[lIdx] || "untyped";
+                  const charColor =
+                    charStatus === "correct"
+                      ? "text-blue-400"
+                      : charStatus === "incorrect"
+                        ? "text-red-400"
+                        : "text-slate-200";
+                  return (
+                    <span key={lIdx} className={charColor}>
+                      {letter}
+                    </span>
+                  );
+                })}
+                {wIdx < word.length - 1 && " "}
+              </span>
+            ))}
           </p>
 
           <button
